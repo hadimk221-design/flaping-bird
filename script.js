@@ -1,35 +1,42 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-// Resize canvas to full screen
+// Resize canvas to full screen (within container)
 function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    const container = document.getElementById('game-container');
+    canvas.width = container.clientWidth;
+    canvas.height = container.clientHeight;
 }
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
 // Game constants
-const GRAVITY = 0.4; // Stronger gravity for faster fall
-const FLAP = -7;     // Stronger flap
-const SPAWN_RATE = 70; // Faster spawn for faster speed
-const PIPE_WIDTH = 70; // Thicker for trees
-const PIPE_GAP = 160; // Slightly wider gap for higher speed
-const PIPE_SPEED = 5; // Faster scrolling
+const GRAVITY = 0.28; // 0.7x Speed
+const FLAP = -4.9;    // 0.7x Speed
+const SPAWN_RATE = 100; // 0.7x Speed
+const PIPE_WIDTH = 70;
+const PIPE_GAP = 160;
+const PIPE_SPEED = 2.1; // 0.7x Speed
 
 // Game state
 let frames = 0;
 let score = 0;
 let gameState = 'START';
-let currentLevel = 1;
+let currentLevel = 6;
+let birdColor = 'brown'; // Default
 
 // UI Elements
 const startScreen = document.getElementById('start-screen');
+const shopScreen = document.getElementById('shop-screen');
 const gameOverScreen = document.getElementById('game-over-screen');
 const scoreDisplay = document.getElementById('score-display');
 const levelDisplay = document.getElementById('level-display');
 const finalScoreSpan = document.getElementById('final-score');
-const restartBtn = document.getElementById('restart-btn');
+const homeBtn = document.getElementById('home-btn');
+const playBtn = document.getElementById('play-btn');
+const shopBtn = document.getElementById('shop-btn');
+const exitBtn = document.getElementById('exit-btn');
+const closeShopBtn = document.getElementById('close-shop-btn');
 
 // --- GRAPHICS ENGINE ---
 // Theme Definitions
@@ -45,6 +52,18 @@ const themes = {
     3: { // City
         skyBot: "#141E30", skyTop: "#243B55", // Night
         mountains: "#2c3e50", trees: "#34495e", ground: "#2c3e50", grass: "#95a5a6" // Asphalt/Concrete
+    },
+    4: { // Extreme (Volcano)
+        skyBot: "#3E2723", skyTop: "#BF360C", // Red/Orange Ash
+        mountains: "#212121", trees: "#4E342E", ground: "#263238", grass: "#D84315" // Dark rocks and lava
+    },
+    5: { // Pro (Space)
+        skyBot: "#000000", skyTop: "#311B92", // Deep Space
+        mountains: "#4527A0", trees: "#7B1FA2", ground: "#1A237E", grass: "#6200EA" // Neon/Alien
+    },
+    6: { // Ramadan (Event)
+        skyBot: "#1a0b2e", skyTop: "#11052C", // Deep Night Purple
+        mountains: "#cca43b", trees: "#f1c40f", ground: "#1a0b2e", grass: "#cca43b" // Gold/Sand
     }
 };
 
@@ -58,6 +77,35 @@ const layers = {
             grd.addColorStop(1, t.skyBot);
             ctx.fillStyle = grd;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (currentLevel === 6) { // Ramadan Moon and Stars
+                // Stars
+                ctx.fillStyle = "#ffffff";
+                for (let i = 0; i < 20; i++) {
+                    let sx = (Math.sin(i * 132 + frames * 0.01) * 4321) % canvas.width;
+                    let sy = (Math.cos(i * 45 + frames * 0.01) * 1234) % (canvas.height / 2);
+                    if (sx < 0) sx += canvas.width;
+                    if (sy < 0) sy += canvas.height / 2;
+
+                    ctx.globalAlpha = Math.abs(Math.sin(frames * 0.05 + i));
+                    ctx.fillRect(sx, sy, 2, 2);
+                }
+                ctx.globalAlpha = 1.0;
+
+                // Crescent Moon
+                ctx.save();
+                ctx.translate(canvas.width - 80, 80);
+                ctx.rotate(-0.2);
+                ctx.fillStyle = "#f1c40f";
+                ctx.beginPath();
+                ctx.arc(0, 0, 30, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalCompositeOperation = 'destination-out';
+                ctx.beginPath();
+                ctx.arc(10, -5, 28, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
         }
     },
     clouds: {
@@ -121,7 +169,7 @@ const layers = {
                 // Right wing tip
                 ctx.lineTo(b.x + b.size, b.y - b.size + flap);
 
-                ctx.strokeStyle = "rgba(255, 255, 255, 0.4)"; // White-ish silhouette
+                ctx.strokeStyle = "rgba(0, 0, 0, 0.5)"; // Black silhouette
                 ctx.lineWidth = 1.5;
                 ctx.stroke();
             }
@@ -148,6 +196,28 @@ const layers = {
                     ctx.rect(offsetX + 550, canvas.height - 350, 100, 350);
                     ctx.rect(offsetX + 700, canvas.height - 200, 200, 200);
                     ctx.fill();
+                } else if (currentLevel === 6) {
+                    // Mosques / Minarets
+                    let spacing = 300;
+                    for (let j = 0; j < 5; j++) {
+                        let mx = offsetX + j * spacing;
+
+                        ctx.fillStyle = "#15082bb0"; // Darker silhouette
+
+                        // Minaret
+                        ctx.fillRect(mx, canvas.height - 250, 20, 250);
+                        // Dome
+                        ctx.beginPath();
+                        ctx.arc(mx + 80, canvas.height - 100, 40, Math.PI, 0);
+                        ctx.fill();
+                        ctx.fillRect(mx + 40, canvas.height - 100, 80, 100);
+
+                        // Crescent on top
+                        ctx.fillStyle = "#d4af37";
+                        ctx.beginPath();
+                        ctx.arc(mx + 80, canvas.height - 145, 5, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
                 } else {
                     // Natural Mountains/Hills
                     ctx.beginPath();
@@ -181,20 +251,135 @@ const layers = {
                         ctx.arc(offsetX + j * 250 + 5, canvas.height - 160, 15, 0, Math.PI * 2); // Light
                         ctx.fill();
                     }
+                } else if (currentLevel === 6) {
+                    // Hanging Lanterns (Fanous)
+                    for (let j = 0; j < 6; j++) {
+                        let lx = offsetX + j * 180 + 50;
+                        let ly = 100 + Math.sin(frames * 0.05 + j) * 10; // Bobbing
+
+                        // String
+                        ctx.strokeStyle = "#cca43b";
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.moveTo(lx, 0);
+                        ctx.lineTo(lx, ly);
+                        ctx.stroke();
+
+                        // Lantern Body
+                        ctx.fillStyle = "rgba(255, 215, 0, 0.6)"; // Glow
+                        ctx.beginPath();
+                        ctx.moveTo(lx - 10, ly);
+                        ctx.lineTo(lx + 10, ly);
+                        ctx.lineTo(lx + 15, ly + 20);
+                        ctx.lineTo(lx, ly + 40);
+                        ctx.lineTo(lx - 15, ly + 20);
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.stroke();
+
+                        // Light
+                        ctx.fillStyle = "#fff";
+                        ctx.beginPath();
+                        ctx.arc(lx, ly + 20, 5, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
                 } else if (currentLevel === 2) {
                     // Reeds for river
                     for (let j = 0; j < 15; j++) {
+                        let sway = Math.sin(frames * 0.05 + j) * 5;
                         ctx.beginPath();
-                        ctx.ellipse(offsetX + j * 100, canvas.height, 10, 80 + (j % 3) * 20, 0, 0, Math.PI, true);
+                        ctx.moveTo(offsetX + j * 100, canvas.height);
+                        ctx.quadraticCurveTo(offsetX + j * 100 + sway, canvas.height - 40, offsetX + j * 100 + sway * 1.5, canvas.height - 80);
+                        ctx.lineTo(offsetX + j * 100 + 10 + sway * 1.5, canvas.height - 80);
+                        ctx.quadraticCurveTo(offsetX + j * 100 + 10 + sway, canvas.height - 40, offsetX + j * 100 + 10, canvas.height);
                         ctx.fill();
                     }
                 } else {
-                    // Jungle trees
-                    for (let t = 0; t < 10; t++) {
+                    // RICH JUNGLE OVERHAUL
+
+                    // 1. Background Trees (Silhouettes/Lighter - Far away)
+                    for (let t = 0; t < 6; t++) {
+                        let sway = Math.sin(frames * 0.01 + t * 2) * 5;
+                        let treeX = offsetX + t * 300 + 100;
+                        let treeH = 200 + (t % 4) * 40;
+
+                        ctx.fillStyle = "#33691E"; // Lighter/Faded Green
+
+                        // Trunk
                         ctx.beginPath();
-                        ctx.moveTo(offsetX + t * 200, canvas.height);
-                        ctx.lineTo(offsetX + t * 200 + 50, canvas.height - 150 - (t % 3) * 50);
-                        ctx.lineTo(offsetX + t * 200 + 100, canvas.height);
+                        ctx.moveTo(treeX, canvas.height);
+                        ctx.quadraticCurveTo(treeX + sway, canvas.height - treeH / 2, treeX + sway / 2, canvas.height - treeH);
+                        ctx.lineWidth = 15;
+                        ctx.strokeStyle = "#4E342E"; // Dark Brown
+                        ctx.lineCap = "round";
+                        ctx.stroke();
+
+                        // Canopy (Cloud style for distance)
+                        ctx.beginPath();
+                        ctx.arc(treeX + sway / 2, canvas.height - treeH, 40, 0, Math.PI * 2);
+                        ctx.arc(treeX + sway / 2 - 25, canvas.height - treeH + 10, 30, 0, Math.PI * 2);
+                        ctx.arc(treeX + sway / 2 + 25, canvas.height - treeH + 10, 30, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+
+                    // 2. Foreground Trees (Detailed - Close)
+                    for (let t = 0; t < 5; t++) {
+                        let sway = Math.sin(frames * 0.02 + t) * 8;
+                        let treeX = offsetX + t * 250;
+                        let treeH = 300 + (t % 3) * 60; // Taller
+
+                        // Trunk Gradient
+                        let trunkGrad = ctx.createLinearGradient(treeX, canvas.height, treeX, canvas.height - treeH);
+                        trunkGrad.addColorStop(0, "#3E2723");
+                        trunkGrad.addColorStop(1, "#5D4037");
+                        ctx.fillStyle = trunkGrad;
+
+                        // Trunk
+                        ctx.beginPath();
+                        ctx.moveTo(treeX - 15, canvas.height);
+                        ctx.quadraticCurveTo(treeX + sway, canvas.height - treeH / 2, treeX + sway, canvas.height - treeH);
+                        ctx.lineTo(treeX + sway + 5, canvas.height - treeH);
+                        ctx.quadraticCurveTo(treeX + sway + 5, canvas.height - treeH / 2, treeX + 15, canvas.height);
+                        ctx.fill();
+
+                        // Lush Canopy
+                        let leafColor = (t % 2 === 0) ? "#1B5E20" : "#2E7D32";
+                        ctx.fillStyle = leafColor;
+                        let crownX = treeX + sway;
+                        let crownY = canvas.height - treeH;
+
+                        // Draw clusters
+                        for (let c = 0; c < 5; c++) {
+                            let angle = (c / 5) * Math.PI * 2;
+                            let cx = crownX + Math.cos(angle) * 30;
+                            let cy = crownY + Math.sin(angle) * 20;
+
+                            ctx.beginPath();
+                            ctx.arc(cx, cy, 35, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
+                        // Center top
+                        ctx.beginPath();
+                        ctx.arc(crownX, crownY - 10, 40, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        // Vines
+                        if (t % 3 === 0) {
+                            ctx.beginPath();
+                            ctx.moveTo(crownX - 20, crownY + 20);
+                            ctx.quadraticCurveTo(crownX - 30, crownY + 60, crownX - 20, crownY + 100);
+                            ctx.strokeStyle = "#4CAF50";
+                            ctx.lineWidth = 2;
+                            ctx.stroke();
+                        }
+                    }
+
+                    // 3. Ground Bushes/Ferns
+                    for (let b = 0; b < 10; b++) {
+                        let bx = offsetX + b * 120;
+                        ctx.fillStyle = "#2E7D32";
+                        ctx.beginPath();
+                        ctx.arc(bx, canvas.height, 25 + Math.sin(frames * 0.05 + b) * 5, Math.PI, 0); // Semicircle
                         ctx.fill();
                     }
                 }
@@ -202,6 +387,14 @@ const layers = {
         }
     }
 }
+
+const birdThemes = {
+    brown: { body: '#3E2723', highlight: '#795548', wing: '#5D4037' },
+    gold: { body: '#FFD700', highlight: '#FFF59D', wing: '#FFA000' },
+    blue: { body: '#1976D2', highlight: '#64B5F6', wing: '#0D47A1' },
+    red: { body: '#D32F2F', highlight: '#EF5350', wing: '#B71C1C' },
+    ramadan: { body: '#Ffffff', highlight: '#FFD700', wing: '#1B5E20' } // White/Gold/Green
+};
 
 class Bird {
     constructor() {
@@ -228,6 +421,9 @@ class Bird {
         }
         ctx.rotate(this.rotation);
 
+        // Get Theme
+        const theme = birdThemes[birdColor] || birdThemes['brown'];
+
         // --- 3D EAGLE RENDERING ---
 
         // 1. Far Wing (Behind body)
@@ -235,7 +431,7 @@ class Bird {
         let wingY = Math.sin(this.frame * 0.2) * 20; // Flapping motion
         let wingSkew = Math.cos(this.frame * 0.2) * 5;
 
-        ctx.fillStyle = '#3E2723';
+        ctx.fillStyle = theme.body;
         ctx.beginPath();
         ctx.moveTo(-10, 5);
         ctx.quadraticCurveTo(-20, -20 + wingY, -50 + wingSkew, -10 + wingY);
@@ -258,8 +454,8 @@ class Bird {
 
         // 3. Body (3D Sphere effect)
         let bodyGrad = ctx.createRadialGradient(-5, 5, 2, -5, 5, 25);
-        bodyGrad.addColorStop(0, '#795548'); // Highlight
-        bodyGrad.addColorStop(1, '#3E2723'); // Shadow
+        bodyGrad.addColorStop(0, theme.highlight); // Highlight
+        bodyGrad.addColorStop(1, theme.body); // Shadow
         ctx.fillStyle = bodyGrad;
         ctx.beginPath();
         ctx.ellipse(-5, 5, 22, 14, -0.2, 0, Math.PI * 2);
@@ -299,7 +495,7 @@ class Bird {
 
         // 7. Near Wing (In front of body)
         // Flap slightly offset from far wing for 3D feel
-        ctx.fillStyle = '#5D4037';
+        ctx.fillStyle = theme.wing;
         ctx.beginPath();
         ctx.moveTo(0, 5);
         ctx.quadraticCurveTo(-10, -25 + wingY, -45 + wingSkew, -15 + wingY);
@@ -431,7 +627,7 @@ const pipes = {
 
         for (let i = 0; i < this.position.length; i++) {
             let p = this.position[i];
-            p.x -= PIPE_SPEED;
+            p.x -= PIPE_SPEED_VAR;
 
 
             function showLevelUp(text) {
@@ -450,19 +646,40 @@ const pipes = {
                 this.position.shift();
                 score++;
                 scoreDisplay.innerText = score;
+                // Animation
+                scoreDisplay.classList.remove('score-pop');
+                void scoreDisplay.offsetWidth; // Force Reflow
+                scoreDisplay.classList.add('score-pop');
+
                 sound.score();
 
+                // Ramadan Event: No Level Changes for now, or maybe speed up only?
+                if (score % 20 === 0) {
+                    PIPE_SPEED_VAR += 0.05;
+                    showLevelUp("Speed Up!");
+                }
+
+                /*
                 // Level Check
                 if (score === 20 && currentLevel === 1) {
                     currentLevel = 2;
                     showLevelUp("Level 2: Medium");
                     // Speed up
-                    PIPE_SPEED_VAR = 6;
+                    PIPE_SPEED_VAR = PIPE_SPEED_BASE * 1.01; // 1% increase
                 } else if (score === 50 && currentLevel === 2) {
                     currentLevel = 3;
                     showLevelUp("Level 3: Hard");
-                    PIPE_SPEED_VAR = 7;
+                    PIPE_SPEED_VAR = PIPE_SPEED_BASE * 1.06; // 6% increase
+                } else if (score === 100 && currentLevel === 3) {
+                    currentLevel = 4;
+                    showLevelUp("Level 4: Extreme");
+                    PIPE_SPEED_VAR = PIPE_SPEED_BASE * 1.08; // 8% increase
+                } else if (score === 180 && currentLevel === 4) {
+                    currentLevel = 5;
+                    showLevelUp("Level 5: Pro");
+                    PIPE_SPEED_VAR = PIPE_SPEED_BASE * 1.10; // 10% increase
                 }
+                */
 
                 i--;
                 continue;
@@ -514,8 +731,12 @@ const bg = {
 
 const bird = new Bird();
 
-const PIPE_SPEED_BASE = 5;
+const PIPE_SPEED_BASE = 2.1;
 let PIPE_SPEED_VAR = PIPE_SPEED_BASE;
+
+let lastTime = 0;
+const FPS_LIMIT = 60;
+const FRAME_DURATION = 1000 / FPS_LIMIT;
 
 function init() {
     bird.y = canvas.height / 2;
@@ -524,65 +745,73 @@ function init() {
     pipes.reset();
     score = 0;
     frames = 0;
-    currentLevel = 1; // Reset Level
+    currentLevel = 6; // Reset Level to Ramadan
     PIPE_SPEED_VAR = PIPE_SPEED_BASE; // Reset Speed
     scoreDisplay.innerText = score;
     gameState = 'START';
+    lastTime = 0; // Reset time
 
     startScreen.classList.remove('hidden');
+    shopScreen.classList.add('hidden');
     gameOverScreen.classList.add('hidden');
     levelDisplay.classList.add('hidden'); // Ensure hidden
 
-    loop();
+    requestAnimationFrame(loop);
 }
 
-function loop() {
-    // Clear handled by sky draw
+function loop(timestamp) {
+    if (gameState !== 'PLAYING' && gameState !== 'START') return;
 
-    // Update BG even in start screen for nice effect?
-    // Let's only move parallax when playing, but draw always
+    requestAnimationFrame(loop);
 
-    if (gameState === 'PLAYING') {
-        // BG draws
-        bg.draw();
-        pipes.update();
-        pipes.draw();
-        bird.update();
-        bird.draw();
-        frames++;
-        requestAnimationFrame(loop);
-    } else if (gameState === 'START') {
-        // Draw static bg
-        layers.sky.draw();
-        // Don't scroll layers
-        let tmpSpeed1 = layers.clouds.speed;
-        let tmpSpeed2 = layers.mountains.speed;
-        let tmpSpeed3 = layers.trees.speed;
+    if (!lastTime) { lastTime = timestamp; return; }
 
-        layers.clouds.speed = 0.2; // Slow scroll for ambiance
-        layers.mountains.speed = 0;
-        layers.trees.speed = 0;
+    const deltaTime = timestamp - lastTime;
 
-        layers.clouds.draw();
-        layers.mountains.draw();
-        layers.trees.draw();
+    if (deltaTime >= FRAME_DURATION) {
+        lastTime = timestamp - (deltaTime % FRAME_DURATION);
 
-        // Restore speeds
-        layers.clouds.speed = tmpSpeed1;
-        layers.mountains.speed = tmpSpeed2;
-        layers.trees.speed = tmpSpeed3;
+        // Clear handled by sky draw usually, but we need consistency
 
-        // Ground
-        ctx.fillStyle = '#3E2723';
-        ctx.fillRect(0, canvas.height - 20, canvas.width, 20);
-        ctx.fillStyle = '#43A047';
-        ctx.fillRect(0, canvas.height - 30, canvas.width, 10);
+        if (gameState === 'PLAYING') {
+            // BG draws
+            bg.draw();
+            pipes.update();
+            pipes.draw();
+            bird.update();
+            bird.draw();
+            frames++;
+        } else if (gameState === 'START') {
+            // Draw static bg
+            layers.sky.draw();
+            // Don't scroll layers
+            let tmpSpeed1 = layers.clouds.speed;
+            let tmpSpeed2 = layers.mountains.speed;
+            let tmpSpeed3 = layers.trees.speed;
 
-        // Bird hover
-        bird.y = canvas.height / 2 + Math.sin(Date.now() / 500) * 10;
-        bird.draw();
+            layers.clouds.speed = 0.2; // Slow scroll for ambiance
+            layers.mountains.speed = 0;
+            layers.trees.speed = 0;
 
-        requestAnimationFrame(loop);
+            layers.clouds.draw();
+            layers.mountains.draw();
+            layers.trees.draw();
+
+            // Restore speeds
+            layers.clouds.speed = tmpSpeed1;
+            layers.mountains.speed = tmpSpeed2;
+            layers.trees.speed = tmpSpeed3;
+
+            // Ground
+            ctx.fillStyle = '#3E2723';
+            ctx.fillRect(0, canvas.height - 20, canvas.width, 20);
+            ctx.fillStyle = '#43A047';
+            ctx.fillRect(0, canvas.height - 30, canvas.width, 10);
+
+            // Bird hover
+            bird.y = canvas.height / 2 + Math.sin(Date.now() / 500) * 10;
+            bird.draw();
+        }
     }
 }
 
@@ -600,13 +829,63 @@ function gameOver() {
     sound.crash();
     gameState = 'GAMEOVER';
     finalScoreSpan.innerText = score;
+
+    // High Score Logic
+    let highScore = localStorage.getItem('flappyHighScore') || 0;
+    if (score > highScore) {
+        highScore = score;
+        localStorage.setItem('flappyHighScore', highScore);
+    }
+    // Update Best Score Display
+    const bestScoreEl = document.getElementById('best-score');
+    if (bestScoreEl) bestScoreEl.innerText = highScore;
+
     gameOverScreen.classList.remove('hidden');
+
+    // Screen Shake
+    const container = document.getElementById('game-container');
+    container.classList.add('shake');
+    setTimeout(() => {
+        container.classList.remove('shake');
+    }, 500);
+
+    // Firework Celebration if score > 0
+    if (score > 0) {
+        for (let i = 0; i < 30; i++) {
+            createFirework();
+        }
+    }
+}
+
+function createFirework() {
+    const el = document.createElement('div');
+    el.classList.add('firework');
+    el.style.left = '50%';
+    el.style.top = '50%';
+    el.style.backgroundColor = `hsl(${Math.random() * 360}, 100%, 50%)`;
+
+    // Random direction
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 50 + Math.random() * 150;
+    const fx = Math.cos(angle) * dist + 'px';
+    const fy = Math.sin(angle) * dist + 'px';
+
+    el.style.setProperty('--fx', fx);
+    el.style.setProperty('--fy', fy);
+
+    gameOverScreen.appendChild(el);
+
+    // Cleanup
+    setTimeout(() => {
+        el.remove();
+    }, 1000);
 }
 
 // Input Handling
 window.addEventListener('keydown', function (e) {
     if (e.code === 'Space') {
         if (gameState === 'START') {
+            if (!shopScreen.classList.contains('hidden')) return; // Don't start if shop is open
             startGame();
             bird.flap();
         } else if (gameState === 'PLAYING') {
@@ -622,8 +901,9 @@ window.addEventListener('mousedown', function (e) {
     if (e.target.tagName === 'BUTTON') return; // Let button clicks handle themselves
 
     if (gameState === 'START') {
-        startGame();
-        bird.flap();
+        // Only start via Play Button now
+        // startGame(); 
+        // bird.flap();
     } else if (gameState === 'PLAYING') {
         bird.flap();
     } else if (gameState === 'GAMEOVER') {
@@ -637,8 +917,62 @@ window.addEventListener('mousedown', function (e) {
     }
 });
 
-restartBtn.addEventListener('click', function () {
+homeBtn.addEventListener('click', function () {
+    // Standard restart which goes to home
     init();
+});
+
+const shareBtn = document.getElementById('share-btn');
+shareBtn.addEventListener('click', async () => {
+    const shareData = {
+        title: 'Flappy Eagle',
+        text: `I scored ${score} in Flappy Eagle! Can you beat me?`,
+        url: window.location.href
+    };
+
+    if (navigator.share) {
+        try {
+            await navigator.share(shareData);
+        } catch (err) {
+            console.log('Error sharing:', err);
+        }
+    } else {
+        // Fallback
+        navigator.clipboard.writeText(`I scored ${score} in Flappy Eagle! Play here: ${window.location.href}`)
+            .then(() => {
+                const originalText = shareBtn.innerText;
+                shareBtn.innerText = "Copied!";
+                setTimeout(() => {
+                    shareBtn.innerText = originalText;
+                }, 2000);
+            })
+            .catch(err => {
+                console.error('Failed to copy: ', err);
+            });
+    }
+}); // End of shareBtn listener
+
+// --- MENU EVENT LISTENERS ---
+playBtn.addEventListener('click', () => {
+    startGame();
+    bird.flap(); // Initial jump
+});
+
+shopBtn.addEventListener('click', () => {
+    shopScreen.classList.remove('hidden');
+    updateShopUI(); // Ensure correct tick is shown
+});
+
+closeShopBtn.addEventListener('click', () => {
+    shopScreen.classList.add('hidden');
+    startScreen.classList.remove('hidden'); // Ensure we go back to Home
+});
+
+exitBtn.addEventListener('click', () => {
+    // Attempt to close window (only works if script opened it)
+    window.close();
+    // Fallback: Reload to "reset" or show goodbye
+    location.reload();
 });
 
 // --- AUDIO SYSTEM ---
@@ -691,6 +1025,53 @@ const sound = {
         // Ping
         this.playTone(1000, 'sine', 0.1);
     }
+}
+
+// Shop Update Function
+function updateShopUI() {
+    // Remove selected class from all
+    document.querySelectorAll('.shop-item').forEach(item => {
+        item.classList.remove('selected');
+    });
+
+    // Add to current color
+    const selectedItem = document.getElementById(`item-${birdColor}`);
+    if (selectedItem) selectedItem.classList.add('selected');
+}
+
+// Shop select handler
+function setBirdColor(color) {
+    if (birdThemes[color]) {
+        birdColor = color;
+        // Optional: Save to local storage
+        try {
+            localStorage.setItem('birdColor', color);
+        } catch (e) { }
+        updateShopUI();
+    }
+}
+
+// Load saved color
+try {
+    const savedColor = localStorage.getItem('birdColor');
+    if (savedColor && birdThemes[savedColor]) {
+        birdColor = savedColor;
+    }
+} catch (e) { }
+
+// Initialize Shop UI
+updateShopUI();
+
+// --- MENU EVENT LISTENERS (Updated) ---
+// We already have listeners but need to ensure correct behavior
+// Re-attaching closeShopBtn listener here to be sure, or just rely on existing one if it works.
+// The existing listener just does `shopScreen.classList.add('hidden')`.
+// Let's modify it to be explicit about showing start screen if we want.
+
+const closeShopBtnRef = document.getElementById('close-shop-btn');
+if (closeShopBtnRef) {
+    // Remove old listener to avoid duplicates if possible, or just overwrite behavior in next step
+    // Since we can't easily remove anonymous listeners, we will rely on editing the block above where they are defined.
 }
 
 // Kickoff

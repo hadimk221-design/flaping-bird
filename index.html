@@ -4,8 +4,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flappy Bird Clone</title>
+    <meta name="google-site-verification" content="rVmHnKaA_9qrsjqPlP0viKgvy3hgaG5R42q5YbzyUGw" />
+    <title>Flappy Bird</title>
     <link rel="stylesheet" href="style.css">
+    <meta property="og:title" content="Flappy Bird">
+    <meta property="og:description" content="Play the Eagle version of Flappy Bird!">
+    <meta property="og:image" content="flying_bird_meta.svg">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="flying_bird_meta.svg">
+    <meta name="keyword" content="flygame">
+    <meta name="download.image" content="dowload.jpg">
 </head>
 
 <body>
@@ -13,14 +21,49 @@
         <canvas id="gameCanvas" width="320" height="480"></canvas>
         <div id="ui-layer">
             <div id="start-screen">
-                <h1>Flappy Bird</h1>
-                <p>Click or Press Space to Play</p>
+                <h1>Ramadan Mubarak</h1>
+                <div class="menu-buttons">
+                    <button id="play-btn" class="menu-btn">▶ PLAY</button>
+                    <button id="shop-btn" class="menu-btn">🛒 SHOP</button>
+                    <button id="exit-btn" class="menu-btn">✖ EXIT</button>
+                </div>
                 <p class="credits">Made by Abdul Hadi</p>
+            </div>
+            <div id="shop-screen" class="hidden">
+                <div class="shop-content">
+                    <h2>Shop</h2>
+                    <div class="shop-items">
+                        <div id="item-brown" class="shop-item" onclick="setBirdColor('brown')">
+                            <div class="color-dot" style="background-color: #3E2723;"></div>
+                            <p>Brown</p>
+                        </div>
+                        <div id="item-gold" class="shop-item" onclick="setBirdColor('gold')">
+                            <div class="color-dot" style="background-color: #FFD700;"></div>
+                            <p>Gold</p>
+                        </div>
+                        <div id="item-blue" class="shop-item" onclick="setBirdColor('blue')">
+                            <div class="color-dot" style="background-color: #2196F3;"></div>
+                            <p>Blue</p>
+                        </div>
+                        <div id="item-red" class="shop-item" onclick="setBirdColor('red')">
+                            <div class="color-dot" style="background-color: #F44336;"></div>
+                            <p>Red</p>
+                        </div>
+                        <div id="item-ramadan" class="shop-item" onclick="setBirdColor('ramadan')">
+                            <!-- Special icon instead of dot for event item -->
+                            <div style="font-size: 24px;">🌙</div>
+                            <p>Ramadan</p>
+                        </div>
+                    </div>
+                    <button id="close-shop-btn">⬅ BACK</button>
+                </div>
             </div>
             <div id="game-over-screen" class="hidden">
                 <h1>Game Over</h1>
                 <p>Score: <span id="final-score">0</span></p>
-                <button id="restart-btn">Restart</button>
+                <p class="best-score-text">Best: <span id="best-score">0</span></p>
+                <button id="home-btn">🏠 HOME</button>
+                <button id="share-btn">🔗 SHARE SCORE</button>
             </div>
             <div id="score-display">0</div>
             <div id="level-display" class="hidden">Level 1</div>
